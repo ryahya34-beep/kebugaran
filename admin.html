@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — Program Builder</title>
+<style>
+  :root {
+    --bg: #0d0e12;
+    --surface: #15171d;
+    --surface-2: #1c1f27;
+    --border: #2a2e38;
+    --text: #e8eaed;
+    --text-dim: #8b909a;
+    --accent: #4dd0e1;
+    --accent-2: #b388ff;
+    --danger: #ff6b6b;
+    --success: #69f0ae;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .container { max-width: 980px; margin: 0 auto; padding: 24px 16px 80px; }
+  h1 { font-size: 18px; letter-spacing: 1px; margin: 0 0 4px; }
+  .subtitle { color: var(--text-dim); font-size: 11px; margin-bottom: 24px; }
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: end; }
+  .field { display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 120px; }
+  label { font-size: 10px; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.5px; }
+  input, select, textarea {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 8px 10px;
+    border-radius: 4px;
+    font: inherit;
+    width: 100%;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  button {
+    background: var(--accent);
+    color: #000;
+    border: none;
+    padding: 9px 14px;
+    border-radius: 4px;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+  }
+  button:hover { filter: brightness(1.1); }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  button.ghost:hover { border-color: var(--accent); color: var(--accent); }
+  button.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+  button.danger:hover { background: var(--danger); color: #000; }
+  .week-card { border-left: 3px solid var(--accent-2); }
+  .week-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .week-title { font-size: 14px; font-weight: 600; color: var(--accent-2); }
+  .day-row {
+    display: grid;
+    grid-template-columns: 50px 110px 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 6px;
+    align-items: center;
+  }
+  .day-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-dim);
+    text-align: center;
+    background: var(--surface-2);
+    padding: 8px 0;
+    border-radius: 4px;
+  }
+  .type-rest     { color: var(--text-dim); }
+  .type-easy     { color: #64b5f6; }
+  .type-interval { color: var(--accent-2); }
+  .type-long     { color: var(--success); }
+  .actions { position: sticky; bottom: 0; background: var(--bg); padding: 12px 0; display: flex; gap: 8px; flex-wrap: wrap; border-top: 1px solid var(--border); margin-top: 16px; }
+  .toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%); background: var(--success); color: #000; padding: 10px 18px; border-radius: 4px; font-weight: 600; opacity: 0; transition: opacity 0.2s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+  .link-box {
+    background: var(--surface-2);
+    border: 1px solid var(--accent);
+    border-radius: 4px;
+    padding: 12px;
+    margin-top: 12px;
+    display: none;
+    word-break: break-all;
+    font-size: 12px;
+  }
+  .link-box.show { display: block; }
+  .link-box a { color: var(--accent); }
+  @media (max-width: 600px) {
+    .day-row { grid-template-columns: 40px 1fr; grid-auto-rows: auto; }
+    .day-row select, .day-row input { grid-column: 2; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>PROGRAM BUILDER</h1>
+  <div class="subtitle">Bangun custom program lari → simpan ke localStorage → buka di index.html</div>
+
+  <div class="card">
+    <div class="row">
+      <div class="field">
+        <label>Nama Program</label>
+        <input id="program-name" placeholder="My Custom Plan">
+      </div>
+      <div class="field" style="max-width:120px">
+        <label>Jumlah Minggu</label>
+        <input id="weeks-count" type="number" min="1" max="52" value="8">
+      </div>
+      <button id="apply-weeks" class="ghost">Generate</button>
+      <button id="load-default" class="ghost" title="Load dari SCHEDULE bawaan">Load Default</button>
+    </div>
+  </div>
+
+  <div id="weeks-container"></div>
+
+  <div class="actions">
+    <button id="save-btn">💾 Simpan</button>
+    <button id="open-btn" class="ghost">→ Buka di index.html</button>
+    <button id="export-btn" class="ghost">Export JSON</button>
+    <button id="import-btn" class="ghost">Import JSON</button>
+    <input id="import-file" type="file" accept="application/json" style="display:none">
+    <button id="clear-btn" class="danger">Hapus custom_schedule</button>
+  </div>
+
+  <div id="link-box" class="link-box"></div>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<script>
+(function() {
+  const STORAGE_KEY = 'custom_schedule';
+  const NAME_KEY = 'custom_schedule_name';
+  const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  const TYPES = ['rest', 'easy', 'interval', 'long'];
+
+  const $ = (id) => document.getElementById(id);
+  const weeksContainer = $('weeks-container');
+
+  function defaultSession(day) {
+    return { day, type: 'rest', label: 'Rest', sub: '' };
+  }
+  function defaultWeek(weekNum) {
+    return {
+      week: weekNum,
+      phase: 1,
+      totalKm: 0,
+      notes: '',
+      sessions: DAYS.map(defaultSession),
+    };
+  }
+
+  function renderWeek(weekObj, idx) {
+    const card = document.createElement('div');
+    card.className = 'card week-card';
+    card.dataset.weekIdx = idx;
+
+    const sessionsHtml = weekObj.sessions.map((s, si) => `
+      <div class="day-row" data-session-idx="${si}">
+        <div class="day-label">${s.day}</div>
+        <select class="f-type type-${s.type}">
+          ${TYPES.map(t => `<option value="${t}" ${t === s.type ? 'selected' : ''}>${t}</option>`).join('')}
+        </select>
+        <input class="f-label" placeholder="label, e.g. 5 km @8:00" value="${escapeAttr(s.label)}">
+        <input class="f-sub" placeholder="sub, e.g. Easy Run" value="${escapeAttr(s.sub)}">
+      </div>
+    `).join('');
+
+    card.innerHTML = `
+      <div class="week-header">
+        <div class="week-title">Week ${weekObj.week}</div>
+        <div class="row" style="flex:0 0 auto; gap:6px">
+          <div class="field" style="min-width:60px"><label>Phase</label><input class="f-phase" type="number" min="1" value="${weekObj.phase}"></div>
+          <div class="field" style="min-width:80px"><label>Total Km</label><input class="f-totalkm" type="number" min="0" value="${weekObj.totalKm}"></div>
+          <div class="field" style="min-width:140px"><label>Notes</label><input class="f-notes" value="${escapeAttr(weekObj.notes)}"></div>
+        </div>
+      </div>
+      ${sessionsHtml}
+    `;
+
+    card.querySelectorAll('.f-type').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        e.target.className = 'f-type type-' + e.target.value;
+      });
+    });
+
+    return card;
+  }
+
+  function escapeAttr(s) {
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
+  }
+
+  function readForm() {
+    const weeks = [];
+    weeksContainer.querySelectorAll('.week-card').forEach((card, idx) => {
+      const sessions = [];
+      card.querySelectorAll('.day-row').forEach(row => {
+        sessions.push({
+          day: row.querySelector('.day-label').textContent,
+          type: row.querySelector('.f-type').value,
+          label: row.querySelector('.f-label').value.trim(),
+          sub: row.querySelector('.f-sub').value.trim(),
+        });
+      });
+      weeks.push({
+        week: idx + 1,
+        phase: parseInt(card.querySelector('.f-phase').value) || 1,
+        totalKm: parseFloat(card.querySelector('.f-totalkm').value) || 0,
+        notes: card.querySelector('.f-notes').value.trim(),
+        sessions,
+      });
+    });
+    return weeks;
+  }
+
+  function renderAll(weeks) {
+    weeksContainer.innerHTML = '';
+    weeks.forEach((w, i) => weeksContainer.appendChild(renderWeek(w, i)));
+  }
+
+  function generateWeeks(count, existing) {
+    const weeks = [];
+    for (let i = 1; i <= count; i++) {
+      weeks.push(existing && existing[i-1] ? existing[i-1] : defaultWeek(i));
+      weeks[i-1].week = i;
+    }
+    return weeks;
+  }
+
+  function toast(msg, ok = true) {
+    const t = $('toast');
+    t.textContent = msg;
+    t.style.background = ok ? 'var(--success)' : 'var(--danger)';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2000);
+  }
+
+  function loadFromStorage() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const data = JSON.parse(raw);
+        if (Array.isArray(data) && data.length) {
+          $('weeks-count').value = data.length;
+          $('program-name').value = localStorage.getItem(NAME_KEY) || '';
+          renderAll(data);
+          return true;
+        }
+      }
+    } catch (e) { console.warn(e); }
+    return false;
+  }
+
+  function loadDefault() {
+    fetch('index.html').then(r => r.text()).then(html => {
+      const m = html.match(/(?:const|let) SCHEDULE = (\[[\s\S]*?\\n\];)/);
+      if (!m) { toast('Default SCHEDULE tidak ditemukan', false); return; }
+      try {
+        const src = m[1].replace(/;$/, '').replace(/\\n/g, '\n').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+        const arr = (new Function('return ' + src))();
+        $('weeks-count').value = arr.length;
+        renderAll(arr);
+        toast('Default SCHEDULE dimuat (belum disimpan)');
+      } catch (e) {
+        toast('Parse error: ' + e.message, false);
+      }
+    }).catch(e => toast('Fetch gagal: ' + e.message, false));
+  }
+
+  // ── Wire up
+  $('apply-weeks').addEventListener('click', () => {
+    const n = Math.max(1, Math.min(52, parseInt($('weeks-count').value) || 8));
+    const existing = readForm();
+    renderAll(generateWeeks(n, existing));
+  });
+
+  $('load-default').addEventListener('click', loadDefault);
+
+  $('save-btn').addEventListener('click', () => {
+    const weeks = readForm();
+    if (!weeks.length) { toast('Tidak ada data', false); return; }
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(weeks));
+      const name = $('program-name').value.trim();
+      if (name) localStorage.setItem(NAME_KEY, name);
+      else localStorage.removeItem(NAME_KEY);
+      toast('Tersimpan ke localStorage');
+
+      const linkBox = $('link-box');
+      const url = new URL('index.html', window.location.href).href;
+      linkBox.innerHTML = `Program "<b>${escapeAttr(name || 'Untitled')}</b>" tersimpan (${weeks.length} minggu).<br><br>→ <a href="${url}">Buka di index.html</a>`;
+      linkBox.classList.add('show');
+    } catch (e) {
+      toast('Save error: ' + e.message, false);
+    }
+  });
+
+  $('open-btn').addEventListener('click', () => {
+    window.location.href = 'index.html';
+  });
+
+  $('export-btn').addEventListener('click', () => {
+    const data = { name: $('program-name').value.trim(), weeks: readForm() };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'custom_schedule.json';
+    a.click();
+  });
+
+  $('import-btn').addEventListener('click', () => $('import-file').click());
+  $('import-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target.result);
+        const weeks = Array.isArray(data) ? data : data.weeks;
+        if (!Array.isArray(weeks)) throw new Error('Format invalid');
+        $('weeks-count').value = weeks.length;
+        if (data.name) $('program-name').value = data.name;
+        renderAll(weeks);
+        toast('Import berhasil (klik Simpan untuk persist)');
+      } catch (err) {
+        toast('Parse error: ' + err.message, false);
+      }
+    };
+    reader.readAsText(file);
+  });
+
+  $('clear-btn').addEventListener('click', () => {
+    if (!confirm('Hapus custom_schedule dari localStorage?')) return;
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(NAME_KEY);
+    toast('custom_schedule dihapus');
+    $('link-box').classList.remove('show');
+  });
+
+  // ── Init
+  if (!loadFromStorage()) {
+    renderAll(generateWeeks(8));
+  }
+})();
+</script>
+</body>
+</html>
